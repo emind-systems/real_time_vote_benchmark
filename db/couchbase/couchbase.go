@@ -31,48 +31,37 @@ var (
 
 func worker(c <-chan Event) {
 	fmt.Println("started worker !")
-	cache := make([]Event, 0, CacheLimit)
-	tick := time.NewTicker(1 * time.Second)
 
 	for {
 		select {
 		case m := <-c:
-			v, err := client.Set(m.id, m.value).Result()
-			if err != nil {
-				panic(err)
-			}
-			if v == "OK" {
-				cache = append(cache, m)
-			}
-			if len(cache) >= CacheLimit {
-				send(cache)
-				cache = cache[:0]
-			}
-		case <-tick.C:
-			if len(cache) > 0 {
-				send(cache)
-				cache = cache[:0]
-			}
+			send(m)
 		}
 	}
 }
 
 func send(e Event) {
-	bucket.Incr("total_votes", 1)
+	bucket.Incr("total_votes", 1, 0, 0)
 }
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	// defer client.Close()
-	client, err := couchbase.Connect(flag.Arg(0))
+	client, err := couchbase.Connect("http://172.31.53.228:8091/")
 	if err != nil {
-		log.Fatalf("Error connecting:  %v", err)
+		fmt.Println("Error connecting:  %v", err)
 	}
-	bucket, err = pool.GetBucket("test")
-		if err2 != nil {
-    	log.Fatalf("Error getting bucket:  %v", err2)
+	pool, err2 := client.GetPool("default")
+	if err2 != nil {
+		fmt.Println("Error getting pool:  %v", err2)
+	}
+
+	bucket, err = pool.GetBucket("default")
+	if err2 != nil {
+		fmt.Println("Error getting bucket:  %v", err2)
 	}
 	bucket.Set("test", 0, 100)
+	bucket.Set("total_votes", 0, 0)
 	ch = make(chan Event, 1000)
 	time.AfterFunc(1*time.Second, func() {
 		for i := 1; i < 72; i++ {
@@ -100,14 +89,9 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	i = i + 1
 	e.id = strconv.Itoa(i)
 	// set vote lock
-	err = bucket.Set(e.id, 0, map[string]interface{}{"vote": e.value})
+	err := bucket.Set(e.id, 0, map[string]interface{}{"vote": e.value})
 	_ = err
 	//fmt.Println(v)
-	if v {
-		ch <- e
-		w.Write([]byte(fmt.Sprintf("Vote")))
-	} else {
-		ch <- e
-		w.Write([]byte(fmt.Sprintf("Duplicate")))
-	}
+	ch <- e
+	w.Write([]byte(fmt.Sprintf("Vote")))
 }

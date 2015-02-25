@@ -81,11 +81,11 @@ func main() {
 
 	writePolicy = as.NewWritePolicy(0, 0)
 	ch = make(chan Event, 1000)
-	key, err := as.NewKey("test", "totals", "test")
+	key, err := as.NewKey("test", "totals", "total_votes")
 	panicOnError(err)
 	// define some bins with data
 	bins := as.BinMap{
-		"value": 100,
+		"total_votes": 0,
 	}
 	err = client.Put(nil, key, bins)
 	panicOnError(err)

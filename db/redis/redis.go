@@ -95,6 +95,7 @@ func main() {
 	ch = make(chan Event, 1000)
 	ping := client.Ping()
 	set := client.Set("test", "123")
+	set = client.Set("total_votes", "0")
 	fmt.Println(ping.Err(), ping.Val())
 	fmt.Println(set.Err(), set.Val())
 	time.AfterFunc(1*time.Second, func() {

@@ -89,7 +89,7 @@ func main() {
 	// defer client.Close()
 	client = redis.NewTCPClient(&redis.Options{
 		Addr:     "172.31.53.226:11684",
-		PoolSize: 100,
+		PoolSize: 10,
 	})
 	client.FlushDb()
 	ch = make(chan Event, 1000)
@@ -98,7 +98,7 @@ func main() {
 	fmt.Println(ping.Err(), ping.Val())
 	fmt.Println(set.Err(), set.Val())
 	time.AfterFunc(1*time.Second, func() {
-		for i := 1; i < 20; i++ {
+		for i := 1; i < 70; i++ {
 			fmt.Println("starting worker %d", i)
 			go worker(ch)
 		}
@@ -118,14 +118,7 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	w.Header().Set("Content-Type", "text/plain")
 
-	//	u, err := url.Parse(r.URL.String())
-	//	if err != nil {
-	//		panic(err)
-	//	}
-
-	//	m, _ := url.ParseQuery(u.RawQuery)
 	e := Event{id: r.FormValue("u"), event: "vote", value: r.FormValue("v")}
-	// e := Event{id: m["u"][0], event: "vote", value: m["v"][0]}
 	//fmt.Println(e)
 
 	// set vote lock
@@ -140,16 +133,3 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func voteHandler2(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/plain")
-
-	//	u, err := url.Parse(r.URL.String())
-	//	if err != nil {
-	//		panic(err)
-	//	}
-
-	e := Event{id: r.FormValue("u"), event: "vote", value: r.FormValue("v")}
-	go vote(e)
-	io.WriteString(w, "OK\n") //	m, _ := url.ParseQuery(u.RawQuery)
-	//	w.Write([]byte(okString))
-}

@@ -18,7 +18,7 @@ type Event struct {
 }
 
 const (
-	CacheLimit = 100
+	CacheLimit = 15
 	okString   = "OK"
 )
 
@@ -37,13 +37,13 @@ func worker(c <-chan Event) {
 	for {
 		select {
 		case m := <-c:
-			v, err := client.Set(m.id, m.value).Result()
-			if err != nil {
-				panic(err)
-			}
-			if v == "OK" {
-				cache = append(cache, m)
-			}
+			//v, err := client.Set(m.id, m.value).Result()
+			//if err != nil {
+			//	panic(err)
+			//}
+			//if v == "OK" {
+			cache = append(cache, m)
+			//}
 			if len(cache) >= CacheLimit {
 				send(cache)
 				cache = cache[:0]
@@ -88,7 +88,7 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	// defer client.Close()
 	client = redis.NewTCPClient(&redis.Options{
-		Addr:     "172.31.53.226:11684",
+		Addr:     "172.31.53.226:11685",
 		PoolSize: 200,
 	})
 	client.FlushDb()

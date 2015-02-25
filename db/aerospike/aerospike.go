@@ -91,7 +91,7 @@ func panicOnError(err error) {
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	// defer client.Close()
-	client, err = as.NewClient("127.0.0.1", 3000)
+	client, err = as.NewClient("172.31.53.227", 3000)
 	fmt.Println(client)
 	panicOnError(err)
 

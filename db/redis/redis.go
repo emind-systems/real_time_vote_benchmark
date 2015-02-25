@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"gopkg.in/redis.v2"
 	"net/http"
-	//	"net/url"
-	"io"
 	"runtime"
 	"time"
 )
@@ -89,7 +87,7 @@ func main() {
 	// defer client.Close()
 	client = redis.NewTCPClient(&redis.Options{
 		Addr:     "172.31.53.226:11684",
-		PoolSize: 10,
+		PoolSize: 200,
 	})
 	client.FlushDb()
 	ch = make(chan Event, 1000)
@@ -98,7 +96,7 @@ func main() {
 	fmt.Println(ping.Err(), ping.Val())
 	fmt.Println(set.Err(), set.Val())
 	time.AfterFunc(1*time.Second, func() {
-		for i := 1; i < 70; i++ {
+		for i := 1; i < 10; i++ {
 			fmt.Println("starting worker %d", i)
 			go worker(ch)
 		}
@@ -129,7 +127,7 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 		ch <- e
 		w.Write([]byte(fmt.Sprintf("Vote")))
 	} else {
+		ch <- e
 		w.Write([]byte(fmt.Sprintf("Duplicate")))
 	}
 }
-

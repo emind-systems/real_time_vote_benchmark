@@ -5,6 +5,7 @@ import (
 	"gopkg.in/redis.v2"
 	"net/http"
 	"runtime"
+	"strconv"
 	"time"
 )
 
@@ -24,7 +25,8 @@ const (
 var (
 	client  *redis.Client
 	ch      chan Event
-	okBytes = []byte(okString)
+	okBytes     = []byte(okString)
+	i       int = 0
 )
 
 func worker(c <-chan Event) {
@@ -118,7 +120,8 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 
 	e := Event{id: r.FormValue("u"), event: "vote", value: r.FormValue("v")}
 	//fmt.Println(e)
-
+	i = i + 1
+	e.id = strconv.Itoa(i)
 	// set vote lock
 	v, err := client.SetNX(e.id, e.value).Result()
 	_ = err

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	//	"net/url"
 	"runtime"
+	"strconv"
 	"time"
 )
 
@@ -18,7 +19,7 @@ type Event struct {
 }
 
 const (
-	CacheLimit = 100
+	CacheLimit = 1
 )
 
 var (
@@ -26,6 +27,7 @@ var (
 	ch          chan Event
 	err         error
 	writePolicy *as.WritePolicy
+	i           int = 0
 )
 
 func worker(c <-chan Event) {
@@ -37,7 +39,7 @@ func worker(c <-chan Event) {
 		select {
 		case m := <-c:
 			cache = append(cache, m)
-			fmt.Println("%d", len(cache))
+			//fmt.Println("%d", len(cache))
 			if len(cache) >= CacheLimit {
 				send(cache)
 				cache = cache[:0]
@@ -52,7 +54,7 @@ func worker(c <-chan Event) {
 }
 
 func send(cache []Event) {
-	fmt.Println("sending %s", len(cache))
+	//fmt.Println("sending %s", len(cache))
 	for index, element := range cache {
 		_ = index
 		//fmt.Println(element.id, element.event, element.value)
@@ -91,12 +93,14 @@ func panicOnError(err error) {
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	// defer client.Close()
+	clientPolicy := as.NewClientPolicy()
+	clientPolicy.ConnectionQueueSize = 100
+	clientPolicy.Timeout = 50 * time.Millisecond
 	client, err = as.NewClient("172.31.53.227", 3000)
-	fmt.Println(client)
 	panicOnError(err)
 
 	writePolicy = as.NewWritePolicy(0, 0)
-	ch = make(chan Event, 1)
+	ch = make(chan Event, 1000)
 	key, err := as.NewKey("test", "totals", "test")
 	panicOnError(err)
 	// define some bins with data
@@ -107,7 +111,7 @@ func main() {
 	panicOnError(err)
 
 	time.AfterFunc(1*time.Second, func() {
-		for i := 1; i < 24; i++ {
+		for i := 1; i < 74; i++ {
 			fmt.Println("starting worker %d", i)
 			go worker(ch)
 		}
@@ -129,7 +133,9 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 
 	e := Event{id: r.FormValue("u"), event: "vote", value: r.FormValue("v")}
 
-	fmt.Println(e)
+	//fmt.Println(i)
+	i = i + 1
+	e.id = strconv.Itoa(i)
 	key, err := as.NewKey("test", "votes", e.id)
 	bins := as.BinMap{
 		"v": e.value,
@@ -139,6 +145,8 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	_ = err
 	if err == nil {
 		ch <- e
+		//	fmt.Println(i)
+
 		w.Write([]byte(fmt.Sprintf("Vote")))
 	} else {
 		w.Write([]byte(fmt.Sprintf("Duplicate")))

@@ -98,7 +98,7 @@ func main() {
 	fmt.Println(ping.Err(), ping.Val())
 	fmt.Println(set.Err(), set.Val())
 	time.AfterFunc(1*time.Second, func() {
-		for i := 1; i < 10; i++ {
+		for i := 1; i < 72; i++ {
 			fmt.Println("starting worker %d", i)
 			go worker(ch)
 		}

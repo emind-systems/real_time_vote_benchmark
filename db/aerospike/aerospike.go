@@ -19,7 +19,7 @@ type Event struct {
 }
 
 const (
-	CacheLimit = 1
+	CacheLimit = 100
 )
 
 var (
@@ -32,56 +32,36 @@ var (
 
 func worker(c <-chan Event) {
 	fmt.Println("started worker !")
-	cache := make([]Event, 0, CacheLimit)
-	tick := time.NewTicker(1 * time.Second)
 
 	for {
 		select {
 		case m := <-c:
-			cache = append(cache, m)
-			//fmt.Println("%d", len(cache))
-			if len(cache) >= CacheLimit {
-				send(cache)
-				cache = cache[:0]
-			}
-		case <-tick.C:
-			if len(cache) > 0 {
-				send(cache)
-				cache = cache[:0]
-			}
+			send(m)
 		}
 	}
 }
 
-func send(cache []Event) {
+func send(element Event) {
 	//fmt.Println("sending %s", len(cache))
-	for index, element := range cache {
-		_ = index
-		//fmt.Println(element.id, element.event, element.value)
-		//fmt.Println(index)
-		key, _ := as.NewKey("test", "totals", "total_votes")
-		ops := []*as.Operation{
-			as.AddOp(as.NewBin("total_votes", 1)), // add the value of the bin to the existing value
-			as.GetOp(),                            // get the value of the record after all operations are executed
-		}
-
-		_, _ = client.Operate(nil, key, ops...)
-
-		key, _ = as.NewKey("test", "totals", element.value)
-		ops = []*as.Operation{
-			as.AddOp(as.NewBin(element.value, 1)), // add the value of the bin to the existing value
-			as.GetOp(),                            // get the value of the record after all operations are executed
-		}
-
-		_, _ = client.Operate(nil, key, ops...)
-		//panicOnError(err)
-		//fmt.Println(rec)
-
-		//		client.Set(element.id, element.value)
-		//		client.Get(element.id)
-		//		client.Incr("total_votes")
-		//		client.Incr(element.value)
+	key, _ := as.NewKey("test", "totals", "total_votes")
+	ops := []*as.Operation{
+		as.AddOp(as.NewBin("total_votes", 1)), // add the value of the bin to the existing value
+		as.GetOp(),                            // get the value of the record after all operations are executed
 	}
+
+	_, _ = client.Operate(nil, key, ops...)
+
+	key, _ = as.NewKey("test", "totals", element.value)
+	ops = []*as.Operation{
+		as.AddOp(as.NewBin(element.value, 1)), // add the value of the bin to the existing value
+		as.GetOp(),                            // get the value of the record after all operations are executed
+	}
+
+	_, _ = client.Operate(nil, key, ops...)
+	//panicOnError(err)
+	//fmt.Println(rec)
+
+	//		client.Set(element.id, element.value)
 }
 
 func panicOnError(err error) {
@@ -111,7 +91,7 @@ func main() {
 	panicOnError(err)
 
 	time.AfterFunc(1*time.Second, func() {
-		for i := 1; i < 74; i++ {
+		for i := 1; i < 72; i++ {
 			fmt.Println("starting worker %d", i)
 			go worker(ch)
 		}

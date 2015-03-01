@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/gocql/gocql"
-	"net/http"
 	"log"
+	"net/http"
 	"runtime"
 	"strconv"
 	"time"
@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	session  *gocql.Session
+	//session *gocql.Session
 	ch      chan Event
 	okBytes     = []byte(okString)
 	i       int = 0
@@ -42,37 +42,35 @@ func worker(c <-chan Event) {
 }
 
 func send(e Event) {
-	if err := session.Query('UPDATE counters SET value=value+1 WHERE id = ?',
-        e.value).Exec(); err != nil {
-        log.Fatal(err)
-    }
-	if err := session.Query('UPDATE counters SET value=value+1 WHERE id = ?',
-        "total_votes").Exec(); err != nil {
-        log.Fatal(err)
-    }
+	if err := session.Query(`UPDATE counters SET value=value+1 WHERE id = ?`, e.value).Exec(); err != nil {
+		log.Fatal(err)
+	}
+	if err := session.Query(`UPDATE counters SET value=value+1 WHERE id = ?`, "total_votes").Exec(); err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	// defer client.Close()
 	// connect to the cluster
-    cluster := gocql.NewCluster("52.1.117.6")
-    cluster.Keyspace = "example"
-    cluster.Consistency = gocql.Quorum
-    session, _ = cluster.CreateSession()
-	
-	if err := session.Query('INSERT INTO totals (id,value) VALUES (?, ?)',
-        "total_votes", 0).Exec(); err != nil {
-        log.Fatal(err)
-    }
-	if err := session.Query('INSERT INTO totals (id,value) VALUES (?, ?)',
-        "y", 0).Exec(); err != nil {
-        log.Fatal(err)
-    }
-	if err := session.Query('INSERT INTO totals (id,value) VALUES (?, ?)',
-        "n", 0).Exec(); err != nil {
-        log.Fatal(err)
-    }
+	cluster := gocql.NewCluster("172.31.53.229")
+	cluster.Keyspace = "example"
+	//cluster.Consistency = gocql.Quorum
+	session, _ := cluster.CreateSession()
+
+	if err := session.Query(`INSERT INTO totals (id,value) VALUES (?, ?)`,
+		"total_votes", 0).Exec(); err != nil {
+		log.Fatal(err)
+	}
+	if err := session.Query(`INSERT INTO totals (id,value) VALUES (?, ?)`,
+		"y", 0).Exec(); err != nil {
+		log.Fatal(err)
+	}
+	if err := session.Query(`INSERT INTO totals (id,value) VALUES (?, ?)`,
+		"n", 0).Exec(); err != nil {
+		log.Fatal(err)
+	}
 	ch = make(chan Event, 1000)
 	time.AfterFunc(1*time.Second, func() {
 		for i := 1; i < 72; i++ {
@@ -100,12 +98,11 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 	i = i + 1
 	e.id = strconv.Itoa(i)
 	// set vote lock
-	
-	if err := session.Query('INSERT INTO votes (id,value) VALUES (?, ?)',
-        e.id, e.value).Exec(); err != nil {
-        log.Fatal(err)
-    }
-	_ = err
+
+	if err := session.Query(`INSERT INTO votes (id,value) VALUES (?, ?)`,
+		e.id, e.value).Exec(); err != nil {
+		log.Fatal(err)
+	}
 	//fmt.Println(v)
 	ch <- e
 	w.Write([]byte(fmt.Sprintf("Vote")))

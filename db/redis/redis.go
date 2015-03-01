@@ -88,7 +88,8 @@ func main() {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	// defer client.Close()
 	client = redis.NewTCPClient(&redis.Options{
-		Addr:     "172.31.53.226:11685",
+		Addr: "172.31.53.226:11685",
+		//Addr:     "172.31.53.226:6379",
 		PoolSize: 200,
 	})
 	client.FlushDb()

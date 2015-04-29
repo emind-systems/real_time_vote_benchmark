@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/couchbaselabs/go-couchbase"
+	"github.com/couchbaselabs/gocb"
+	"github.com/couchbaselabs/gocb/gocbcore"
+	"github.com/kr/pretty"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -13,8 +15,6 @@ type Event struct {
 	id    string
 	event string
 	value string
-	ip    string
-	time  string
 }
 
 const (
@@ -23,10 +23,12 @@ const (
 )
 
 var (
-	bucket  *couchbase.Bucket
+	bucket  *gocb.Bucket
+	cluster *gocb.Cluster
 	ch      chan Event
 	okBytes     = []byte(okString)
 	i       int = 0
+	CB      *gocb.Bucket
 )
 
 func worker(c <-chan Event) {
@@ -41,27 +43,16 @@ func worker(c <-chan Event) {
 }
 
 func send(e Event) {
-	bucket.Incr("total_votes", 1, 0, 0)
+	bucket.Counter("total_votes", 1, 0, 0)
 }
 
 func main() {
+	gocbcore.SetLogger(gocbcore.DefaultStdOutLogger())
 	runtime.GOMAXPROCS(runtime.NumCPU())
-	// defer client.Close()
-	client, err := couchbase.Connect("http://172.31.53.228:8091/")
-	if err != nil {
-		fmt.Println("Error connecting:  %v", err)
-	}
-	pool, err2 := client.GetPool("default")
-	if err2 != nil {
-		fmt.Println("Error getting pool:  %v", err2)
-	}
-
-	bucket, err = pool.GetBucket("default")
-	if err2 != nil {
-		fmt.Println("Error getting bucket:  %v", err2)
-	}
-	bucket.Set("test", 0, 100)
-	bucket.Set("total_votes", 0, 0)
+	cluster, _ = gocb.Connect("http://172.31.31.191")
+	bucket, _ = cluster.OpenBucket("default", "")
+	bucket.Upsert("test", 0, 100)
+	bucket.Upsert("total_votes", 0, 0)
 	ch = make(chan Event, 1000)
 	time.AfterFunc(1*time.Second, func() {
 		for i := 1; i < 72; i++ {
@@ -69,7 +60,6 @@ func main() {
 			go worker(ch)
 		}
 	})
-
 	http.HandleFunc("/vote", voteHandler)
 	http.HandleFunc("/loaderio-35df9c4fffde902e3b0e3e0115816d82.html", validationHandler)
 	http.ListenAndServe(":80", nil)
@@ -83,15 +73,34 @@ func validationHandler(w http.ResponseWriter, r *http.Request) {
 func voteHandler(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	w.Header().Set("Content-Type", "text/plain")
-
 	e := Event{id: r.FormValue("u"), event: "vote", value: r.FormValue("v")}
 	//fmt.Println(e)
 	i = i + 1
 	e.id = strconv.Itoa(i)
 	// set vote lock
-	err := bucket.Set(e.id, 0, map[string]interface{}{"vote": e.value})
+	out, err := bucket.Insert(e.id, &e, 0)
 	_ = err
-	//fmt.Println(v)
+	fmt.Println(err)
+	fmt.Println(out)
 	ch <- e
 	w.Write([]byte(fmt.Sprintf("Vote")))
+}
+
+// printf warning message
+func Check(err error, msg string, args ...interface{}) error {
+	if err != nil {
+		_, _, line, _ := runtime.Caller(1)
+		str := fmt.Sprintf("d: ", line)
+		fmt.Errorf(str+msg, args...)
+		res := pretty.Formatter(err)
+		fmt.Errorf("%# v\n", res)
+	}
+	return err
+}
+
+// print error message and exit program
+func Panic(err error, msg string, args ...interface{}) {
+	if Check(err, msg, args...) != nil {
+		panic(err)
+	}
 }

@@ -78,7 +78,6 @@ func vote(e Event) {
 	v, err := client.Set(e.id, e.value).Result()
 	_ = err
 	if v == "OK" {
-		fmt.Println("fffffff")
 		client.Incr("total_votes")
 		client.Incr(e.value)
 	}

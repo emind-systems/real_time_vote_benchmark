@@ -1,0 +1,13 @@
+CREATE TABLE votes (
+  id text PRIMARY KEY,
+  value text
+);
+
+CREATE TABLE totals (
+  id text PRIMARY KEY,
+  value int
+);
+
+
+INSERT INTO totals (id,value) VALUES ('total_votes',1);
+INSERT INTO votes (id,value) VALUES ('1234', 'y');
